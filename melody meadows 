@@ -1,0 +1,287 @@
+import { useState } from "react";
+
+const CHARACTERS = [
+  { name: "Leo", animal: "Lion", emoji: "🦁", trait: "Brave, cheerful leader" },
+  { name: "Lola", animal: "Lioness", emoji: "🦁", trait: "Sweet, caring, loves harmony" },
+  { name: "Bruno", animal: "Bear", emoji: "🐻", trait: "Funny, clumsy, big heart" },
+  { name: "Hippo", animal: "Hippopotamus", emoji: "🦛", trait: "Gentle giant, loves to dance" },
+  { name: "Tweety", animal: "Parrot", emoji: "🦜", trait: "Loud, colorful, starts every song" },
+  { name: "Freddy", animal: "Frog", emoji: "🐸", trait: "Playful, jumpy, beatboxes" },
+  { name: "Ellie", animal: "Elephant", emoji: "🐘", trait: "Wise, calm, remembers every song" },
+  { name: "Gigi", animal: "Giraffe", emoji: "🦒", trait: "Tall, shy, most beautiful voice" },
+];
+
+const TOPICS = [
+  "Sharing toys", "Brushing teeth", "Being kind", "Making new friends",
+  "Saying sorry", "Eating vegetables", "Cleaning up", "Being brave",
+  "Helping others", "Bedtime routine"
+];
+
+export default function MelodyMeadows() {
+  const [topic, setTopic] = useState("");
+  const [selectedChars, setSelectedChars] = useState(["Leo", "Lola", "Bruno"]);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState("script");
+
+  const toggleChar = (name) => {
+    setSelectedChars(prev =>
+      prev.includes(name)
+        ? prev.length > 1 ? prev.filter(n => n !== name) : prev
+        : prev.length < 5 ? [...prev, name] : prev
+    );
+  };
+
+  const generate = async () => {
+    if (!topic.trim()) return;
+    setLoading(true);
+    setResult(null);
+    setError(null);
+
+    const chars = CHARACTERS.filter(c => selectedChars.includes(c.name));
+    const charList = chars.map(c => `${c.name} the ${c.animal} (${c.trait})`).join(", ");
+
+    const prompt = `You are a children's cartoon writer for "Melody Meadows" — a show about cute singing animals in a magical meadow.
+
+Characters in this episode: ${charList}
+
+Episode topic: "${topic}"
+
+Write a SHORT, fun, child-friendly cartoon episode (ages 2-6). Return ONLY valid JSON in this exact format:
+{
+  "episodeTitle": "catchy episode title",
+  "synopsis": "1-2 sentence episode summary",
+  "script": [
+    {"character": "CharacterName", "line": "what they say or do", "action": "optional stage direction"}
+  ],
+  "song": {
+    "title": "song title",
+    "lyrics": "full song lyrics with verse and chorus, fun and singable for toddlers"
+  },
+  "lesson": "the lesson kids learn"
+}
+
+Keep it fun, simple, musical. Script should have 10-14 lines. Song should have 1 verse + chorus + 1 verse + chorus.`;
+
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{ role: "user", content: prompt }]
+        })
+      });
+
+      const data = await response.json();
+      const text = data.content.map(i => i.text || "").join("");
+      const clean = text.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(clean);
+      setResult(parsed);
+      setActiveTab("script");
+    } catch (err) {
+      setError("Oops! Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: "linear-gradient(135deg, #1a472a 0%, #2d6a4f 40%, #52b788 100%)",
+      fontFamily: "'Segoe UI', system-ui, sans-serif",
+      padding: "20px 16px",
+    }}>
+      <div style={{ textAlign: "center", marginBottom: 28 }}>
+        <div style={{ fontSize: 48, marginBottom: 4 }}>🌿🎵🌿</div>
+        <h1 style={{
+          fontSize: 32, fontWeight: 900, color: "#fff",
+          textShadow: "0 2px 12px rgba(0,0,0,0.3)",
+          margin: 0, letterSpacing: -0.5
+        }}>Melody Meadows</h1>
+        <p style={{ color: "#b7e4c7", fontSize: 15, margin: "6px 0 0" }}>
+          Script & Song Generator ✨
+        </p>
+      </div>
+
+      <div style={{
+        background: "rgba(255,255,255,0.97)",
+        borderRadius: 24,
+        padding: 24,
+        maxWidth: 600,
+        margin: "0 auto",
+        boxShadow: "0 8px 40px rgba(0,0,0,0.18)"
+      }}>
+        <div style={{ marginBottom: 22 }}>
+          <p style={{ fontWeight: 700, fontSize: 15, color: "#1a472a", marginBottom: 12 }}>
+            🐾 Pick up to 5 characters
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {CHARACTERS.map(c => {
+              const selected = selectedChars.includes(c.name);
+              return (
+                <button key={c.name} onClick={() => toggleChar(c.name)} style={{
+                  padding: "7px 13px",
+                  borderRadius: 50,
+                  border: selected ? "2px solid #2d6a4f" : "2px solid #e0e0e0",
+                  background: selected ? "#d8f3dc" : "#f9f9f9",
+                  color: selected ? "#1a472a" : "#888",
+                  fontWeight: selected ? 700 : 400,
+                  fontSize: 13,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  display: "flex", alignItems: "center", gap: 5
+                }}>
+                  {c.emoji} {c.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <p style={{ fontWeight: 700, fontSize: 15, color: "#1a472a", marginBottom: 10 }}>
+            🎬 What's the episode about?
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 12 }}>
+            {TOPICS.map(t => (
+              <button key={t} onClick={() => setTopic(t)} style={{
+                padding: "5px 11px",
+                borderRadius: 50,
+                border: topic === t ? "2px solid #52b788" : "2px solid #e8e8e8",
+                background: topic === t ? "#52b788" : "#f5f5f5",
+                color: topic === t ? "#fff" : "#666",
+                fontSize: 12,
+                cursor: "pointer",
+                fontWeight: topic === t ? 600 : 400,
+              }}>{t}</button>
+            ))}
+          </div>
+          <input
+            value={topic}
+            onChange={e => setTopic(e.target.value)}
+            placeholder="Or type your own topic..."
+            style={{
+              width: "100%", padding: "11px 14px",
+              borderRadius: 12, border: "2px solid #e0e0e0",
+              fontSize: 14, outline: "none", boxSizing: "border-box",
+              fontFamily: "inherit",
+            }}
+          />
+        </div>
+
+        <button onClick={generate} disabled={loading || !topic.trim()} style={{
+          width: "100%", padding: "14px",
+          borderRadius: 14, border: "none",
+          background: loading || !topic.trim()
+            ? "#ccc"
+            : "linear-gradient(135deg, #2d6a4f, #52b788)",
+          color: "#fff", fontSize: 16, fontWeight: 800,
+          cursor: loading || !topic.trim() ? "not-allowed" : "pointer",
+        }}>
+          {loading ? "🎵 Writing your episode..." : "✨ Generate Episode & Song"}
+        </button>
+
+        {error && (
+          <p style={{ color: "#e63946", textAlign: "center", marginTop: 12, fontSize: 14 }}>{error}</p>
+        )}
+
+        {result && (
+          <div style={{ marginTop: 26 }}>
+            <div style={{
+              background: "linear-gradient(135deg, #1a472a, #2d6a4f)",
+              borderRadius: 16, padding: "16px 18px", marginBottom: 16, color: "#fff"
+            }}>
+              <div style={{ fontSize: 12, color: "#b7e4c7", fontWeight: 600, textTransform: "uppercase" }}>Episode</div>
+              <div style={{ fontSize: 20, fontWeight: 900, marginTop: 2 }}>{result.episodeTitle}</div>
+              <div style={{ fontSize: 13, color: "#d8f3dc", marginTop: 6 }}>{result.synopsis}</div>
+              <div style={{
+                marginTop: 10, display: "inline-block",
+                background: "rgba(255,255,255,0.15)", borderRadius: 20,
+                padding: "4px 12px", fontSize: 12, fontWeight: 600
+              }}>
+                💡 Lesson: {result.lesson}
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+              {["script", "song"].map(tab => (
+                <button key={tab} onClick={() => setActiveTab(tab)} style={{
+                  flex: 1, padding: "10px",
+                  borderRadius: 12, border: "none",
+                  background: activeTab === tab ? "#d8f3dc" : "#f0f0f0",
+                  color: activeTab === tab ? "#1a472a" : "#888",
+                  fontWeight: activeTab === tab ? 700 : 500,
+                  fontSize: 14, cursor: "pointer",
+                }}>
+                  {tab === "script" ? "🎬 Script" : "🎵 Song"}
+                </button>
+              ))}
+            </div>
+
+            {activeTab === "script" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {result.script.map((line, i) => {
+                  const char = CHARACTERS.find(c => c.name === line.character) || {};
+                  return (
+                    <div key={i} style={{
+                      display: "flex", gap: 10, alignItems: "flex-start",
+                      background: "#f8fffe", borderRadius: 12, padding: "10px 13px",
+                      border: "1px solid #e8f5e9"
+                    }}>
+                      <div style={{ fontSize: 22, flexShrink: 0 }}>{char.emoji || "🐾"}</div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: "#2d6a4f" }}>{line.character}</div>
+                        <div style={{ fontSize: 14, color: "#333", marginTop: 2 }}>{line.line}</div>
+                        {line.action && (
+                          <div style={{ fontSize: 12, color: "#888", fontStyle: "italic", marginTop: 3 }}>*{line.action}*</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {activeTab === "song" && result.song && (
+              <div style={{
+                background: "linear-gradient(135deg, #fff9db, #fff3cd)",
+                borderRadius: 16, padding: "18px",
+                border: "2px solid #ffe066"
+              }}>
+                <div style={{ textAlign: "center", marginBottom: 14 }}>
+                  <div style={{ fontSize: 28 }}>🎵</div>
+                  <div style={{ fontWeight: 900, fontSize: 18, color: "#1a472a" }}>{result.song.title}</div>
+                </div>
+                <pre style={{
+                  fontFamily: "'Segoe UI', sans-serif",
+                  fontSize: 14, lineHeight: 1.8, color: "#333",
+                  whiteSpace: "pre-wrap", margin: 0
+                }}>{result.song.lyrics}</pre>
+              </div>
+            )}
+
+            <button onClick={() => {
+              const text = `🌿 MELODY MEADOWS 🌿\n\nEpisode: ${result.episodeTitle}\n\n${result.synopsis}\n\nLesson: ${result.lesson}\n\n--- SCRIPT ---\n${result.script.map(l => `${l.character}: ${l.line}${l.action ? ` (*${l.action}*)` : ""}`).join("\n")}\n\n--- SONG: ${result.song?.title} ---\n${result.song?.lyrics}`;
+              navigator.clipboard.writeText(text);
+            }} style={{
+              width: "100%", marginTop: 14, padding: "11px",
+              borderRadius: 12, border: "2px solid #2d6a4f",
+              background: "#fff", color: "#2d6a4f",
+              fontWeight: 700, fontSize: 14, cursor: "pointer"
+            }}>
+              📋 Copy Full Episode
+            </button>
+          </div>
+        )}
+      </div>
+
+      <p style={{ textAlign: "center", color: "rgba(255,255,255,0.5)", fontSize: 12, marginTop: 20 }}>
+        Melody Meadows © 2026 — Your cartoon, your world 🌿
+      </p>
+    </div>
+  );
+}
